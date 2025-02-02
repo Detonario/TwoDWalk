@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="twodwalk:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/twodwalk_jar</output-path>
+    <root id="archive" name="twodwalk.jar">
+      <element id="module-output" name="twodwalk" />
+    </root>
+  </artifact>
+</component>
