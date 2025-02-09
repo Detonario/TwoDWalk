@@ -11,21 +11,23 @@ public class Player implements KeyListener {
     private final Rectangle2D.Float bounds;
     private int health;
 
-    private float vx;
-    public boolean up, down, left, right, jump;
-
     private int playerFrame = 0;
     private long lastPlayerFrameTime = System.currentTimeMillis();
 
-    //Jumping and Gravity
-    private float airSpeed = 0;
+    private final int imageAirSpaceX = 12;
+    private final int imageAirSpaceY = 16;
+
+    public boolean up, down, left, right, jump;
+
+    private boolean leftWalk = false;
+
+    //Moving, Jumping and Gravity
+    public float vx;
+    public float airSpeed = 0; // vy
     private float gravity = 0.42f;
     private float jumpSpeed = -8.25f;
     private float fallSpeedAfterHeadBang = 0.5f;
     private boolean inAir = false;
-
-    //public int jumpYPos;
-    //public int landYPos;
 
     public Player(int x, int y) {
         this.bounds = new Rectangle2D.Float(x, y, 25, 27);
@@ -40,7 +42,6 @@ public class Player implements KeyListener {
 
         if (jump) {
             jump();
-            //jumpYPos = (int) bounds.y;
         }
 
         if (!left && !right && !inAir) return;
@@ -50,28 +51,11 @@ public class Player implements KeyListener {
         if (left) vx -= 3;
         if (right) vx += 3;
 
-
         if (inAir) {
-            if (HelpMethods.canMoveHere(bounds.x, bounds.y + airSpeed, bounds.width, bounds.height, Game.getInstance().getLevelOne())) {
-                airSpeed += gravity;
-                bounds.y += airSpeed;
-
-                updateXPos(vx);
-            } else {
-                bounds.y = HelpMethods.getEntityYPosUnderRoofOrAboveFloor(bounds, airSpeed); // HERE
-                if (airSpeed > 0) {
-                    resetInAir();
-                    //landYPos = (int) bounds.y;
-                } else airSpeed = fallSpeedAfterHeadBang;
-
-                updateXPos(vx);
-            }
-
+            updateYPos();
         } else {
             updateXPos(vx);
         }
-
-
     }
 
 
@@ -81,18 +65,34 @@ public class Player implements KeyListener {
         airSpeed = jumpSpeed;
     }
 
-    private void resetInAir() {
+    private void resetAirValue() {
         inAir = false;
         airSpeed = 0;
     }
+
 
     private void updateXPos(float vx) {
         if (HelpMethods.canMoveHere(bounds.x + vx, bounds.y, bounds.width, bounds.height, Game.getInstance().getLevelOne())) {
             bounds.x += vx;
         } else {
-            System.out.println("Blockiert! Vorher: " + bounds.x + ", vx: " + vx);
-            bounds.x = HelpMethods.getEntityXPosNextToWall(bounds, vx);
-            System.out.println("Nachher: " + bounds.x);
+            bounds.x = HelpMethods.getTileXPos(bounds, vx);
+        }
+    }
+
+    private void updateYPos() {
+        if (HelpMethods.canMoveHere(bounds.x, bounds.y + airSpeed, bounds.width, bounds.height, Game.getInstance().getLevelOne())) {
+            airSpeed += gravity;
+            bounds.y += airSpeed;
+
+            updateXPos(vx);
+        } else {
+            bounds.y = HelpMethods.getTileYPos(bounds, airSpeed);
+
+            if (airSpeed > 0) {
+                resetAirValue();
+            } else airSpeed = fallSpeedAfterHeadBang;
+
+            updateXPos(vx);
         }
     }
 
@@ -103,35 +103,71 @@ public class Player implements KeyListener {
             lastPlayerFrameTime = System.currentTimeMillis();
         }
 
-        if (!left && !right && !inAir) {
-            BufferedImage idle = Game.getInstance().getPlayerAtlas().getSubimage(0, 0, 52, 44);
-            g2d.drawImage(idle, (int) bounds.x - 12, (int) bounds.y - 16, 52, 44, null);
+
+        // Idle
+        if (!left && !right && !inAir && !leftWalk) {
+            BufferedImage idleRight = Game.getInstance().getPlayerAtlas().getSubimage(0, 0, 52, 44);
+            g2d.drawImage(idleRight, (int) bounds.x - imageAirSpaceX, (int) bounds.y - imageAirSpaceY, 52, 44, null);
+        } else if (!left && !right && !inAir) {
+            BufferedImage idleLeft = Game.getInstance().getPlayerAtlas().getSubimage(0, 0, 52, 44);
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.scale(-1, 1);
+            g2d.drawImage(idleLeft, (int) -bounds.x - imageAirSpaceX - 26, (int) bounds.y - imageAirSpaceY, 52, 44, null);
+            g2d.scale(-1, 1);
         }
 
-        if (left) {
+
+        // Only jumping
+        if (!left && !right && airSpeed < 0) {
+            BufferedImage idle = Game.getInstance().getPlayerAtlas().getSubimage(52 * 1, 44 * 0, 52, 44);
+            g2d.drawImage(idle, (int) bounds.x - imageAirSpaceX, (int) bounds.y - imageAirSpaceY, 52, 44, null);
+        } else if (!left && !right && airSpeed > 0) {
+            BufferedImage idle = Game.getInstance().getPlayerAtlas().getSubimage(52 * 2, 44 * 0, 52, 44);
+            g2d.drawImage(idle, (int) bounds.x - imageAirSpaceX, (int) bounds.y - imageAirSpaceY, 52, 44, null);
+        }
+
+
+        // Only moving
+        if (right && !inAir) {
+            leftWalk = false;
+            BufferedImage right = Game.getInstance().getPlayerAtlas().getSubimage(playerFrame * 52, 44, 52, 44);
+            g2d.drawImage(right, (int) bounds.x - imageAirSpaceX, (int) bounds.y - imageAirSpaceY, 52, 44, null);
+        } else if (left && !inAir) {
+            leftWalk = true;
             BufferedImage left = Game.getInstance().getPlayerAtlas().getSubimage(playerFrame * 52, 44, 52, 44);
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2d.scale(-1, 1);
-            g2d.drawImage(left, (int) -bounds.x - 12 - 26, (int) bounds.y - 16, 52, 44, null);
+            g2d.drawImage(left, (int) -bounds.x - imageAirSpaceX - 26, (int) bounds.y - imageAirSpaceY, 52, 44, null);
             g2d.scale(-1, 1);
-        } else if (right) {
-            BufferedImage right = Game.getInstance().getPlayerAtlas().getSubimage(playerFrame * 52, 44, 52, 44);
-            g2d.drawImage(right, (int) bounds.x - 12, (int) bounds.y - 16, 52, 44, null);
-        }
-
-        if (inAir && !left && !right && airSpeed < 0) {
-            BufferedImage jump = Game.getInstance().getPlayerAtlas().getSubimage(52 * 1, 44 * 0, 52, 44);
-            g2d.drawImage(jump, (int) bounds.x - 12, (int) bounds.y - 16, 52, 44, null);
-        } else if (inAir && !left && !right && airSpeed > 0) {
-            BufferedImage fall = Game.getInstance().getPlayerAtlas().getSubimage(52 * 2, 44 * 0, 52, 44);
-            g2d.drawImage(fall, (int) bounds.x - 12, (int) bounds.y - 16, 52, 44, null);
         }
 
 
+        // Jumping AND moving
+        if (inAir && right && airSpeed < 0) {
+            leftWalk = false;
+            BufferedImage rightJump = Game.getInstance().getPlayerAtlas().getSubimage(52 * 1, 44 * 0, 52, 44);
+            g2d.drawImage(rightJump, (int) bounds.x - imageAirSpaceX, (int) bounds.y - imageAirSpaceY, 52, 44, null);
+        } else if (inAir && right && airSpeed > 0) {
+            leftWalk = false;
+            BufferedImage rightFall = Game.getInstance().getPlayerAtlas().getSubimage(52 * 2, 44 * 0, 52, 44);
+            g2d.drawImage(rightFall, (int) bounds.x - imageAirSpaceX, (int) bounds.y - imageAirSpaceY, 52, 44, null);
+        } else if (inAir && left && airSpeed < 0) {
+            leftWalk = true;
+            BufferedImage leftJump = Game.getInstance().getPlayerAtlas().getSubimage(52 * 1, 44 * 0, 52, 44);
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.scale(-1, 1);
+            g2d.drawImage(leftJump, (int) -bounds.x - imageAirSpaceX - 26, (int) bounds.y - imageAirSpaceY, 52, 44, null);
+            g2d.scale(-1, 1);
+        } else if (inAir && left && airSpeed > 0) {
+            leftWalk = true;
+            BufferedImage leftFall = Game.getInstance().getPlayerAtlas().getSubimage(52 * 2, 44 * 0, 52, 44);
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.scale(-1, 1);
+            g2d.drawImage(leftFall, (int) -bounds.x - imageAirSpaceX - 26, (int) bounds.y - imageAirSpaceY, 52, 44, null);
+            g2d.scale(-1, 1);
+        }
 
 
-        /*g2d.setColor(Color.RED);
-        g2d.drawRect((int) bounds.x, (int) bounds.y, 25, 28);*/
     }
 
 
@@ -164,8 +200,12 @@ public class Player implements KeyListener {
     }
 
 
-    public Rectangle2D.Float getBounds() {
-        return bounds;
+    public void setX(int x) {
+        this.bounds.x = x;
+    }
+
+    public void setY(int y) {
+        this.bounds.y = y;
     }
 
 
@@ -178,13 +218,7 @@ public class Player implements KeyListener {
     }
 
 
-    public void setX(int x) {
-        this.bounds.x = x;
+    public Rectangle2D.Float getBounds() {
+        return bounds;
     }
-
-    public void setY(int y) {
-        this.bounds.y = y;
-    }
-
-
 }

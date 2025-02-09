@@ -1,20 +1,15 @@
 package me.detonario;
 
+import java.io.IOException;
+
 public class Main {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
 
-        Game game;
+        Game game = Game.getInstance();
 
-        try {
-            game = Game.getInstance();
-
-            game.start();
-            game.update();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        game.start();
+        game.update();
 
     }
 }

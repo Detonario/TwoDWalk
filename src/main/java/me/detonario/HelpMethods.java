@@ -8,18 +8,16 @@ public class HelpMethods {
 
 
     public static boolean canMoveHere(float x, float y, float width, float height, int[][] lvlData) {
-        if (!isSolid(x, y, lvlData))
-            if (!isSolid(x + width, y + height, lvlData))
-                if (!isSolid(x + width, y, lvlData))
-                    if (!isSolid(x, y + height, lvlData))
-                        return true;
+        if (!isSolid(x, y, lvlData) && !isSolid(x + width, y + height - 2, lvlData) && !isSolid(x + width, y, lvlData) && !isSolid(x, y + height - 2, lvlData))
+            return true;
+
         return false;
     }
 
 
     private static boolean isSolid(float x, float y, int[][] lvlData) {
         if (x < 0 || x > 5000) return true;
-        //if (y < 0 || y >= 450) return true;
+        //if (y < 0 || y > 450) return true;
 
         float xIndex = x / 32;
         float yIndex = y / 32;
@@ -32,7 +30,7 @@ public class HelpMethods {
     }
 
 
-    public static float getEntityXPosNextToWall(Rectangle2D.Float bounds, float vx) {
+    public static float getTileXPos(Rectangle2D.Float bounds, float vx) {
 
         int currentTile = (int) (bounds.x / 32);
 
@@ -43,14 +41,17 @@ public class HelpMethods {
 
             return tileXPos + xOffset - 1;
 
-        } else {
+        } else if (vx < 0) {
             //Left
             return currentTile * 32;
+
+        } else {
+            return bounds.x;
         }
     }
 
 
-    public static float getEntityYPosUnderRoofOrAboveFloor(Rectangle2D.Float bounds, float airSpeed) {
+    public static float getTileYPos(Rectangle2D.Float bounds, float airSpeed) {
 
         int currentTile = (int) (bounds.y / 32);
 
@@ -61,17 +62,18 @@ public class HelpMethods {
 
             return tileYPos + yOffset - 1;
 
-        } else {
+        } else if (airSpeed < 0) {
             //Jumping
             return currentTile * 32;
 
+        } else {
+            return bounds.y;
         }
     }
 
 
     public static boolean isEntityOnFloor(Rectangle2D.Float bounds, int[][] lvlData) {
         // Check the pixel below bottomleft and bottomright
-
         if (!isSolid(bounds.x, bounds.y + bounds.height + 1, lvlData))
             if (!isSolid(bounds.x + bounds.width, bounds.y + bounds.height + 1, lvlData))
                 return false;

@@ -1,11 +1,14 @@
 package me.detonario;
 
 import javax.imageio.ImageIO;
+import javax.sound.sampled.*;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -18,9 +21,12 @@ public class Game extends Canvas {
     public static final int WIDTH = 860;
     public static final int HEIGHT = 485;
 
+    private Player player;
+
     private BufferStrategy strategy;
 
-    private Player player;
+    private BufferedImage backgroundImg, playerAtlas, tileAtlas;
+    private List<BufferedImage> coinImgs = new ArrayList<>();
 
     private LevelLoader loader = LevelLoader.getInstance();
     private int[][] level1;
@@ -30,52 +36,24 @@ public class Game extends Canvas {
     private List<Rectangle> coinList = new ArrayList<>();
     private List<Rectangle> tileList = new ArrayList<>();
 
-    private JLabel scoreBoard;
+    private JLabel scoreboard;
     private int coinsCount = 0;
 
     private int coinFrame = 0;
     private long lastCoinFrameTime = System.currentTimeMillis();
-
-    private BufferedImage backgroundImg, playerAtlas, tileAtlas;
-    private List<BufferedImage> coinImgs = new ArrayList<>();
-
-    private BufferedImage gta6;
-
 
     private Game() {
     }
 
 
     public void start() throws IOException {
-        player = new Player(200, 350);
+        player = new Player(400, 350);
 
-
-        loadImgs();
+        loadImages();
+        //loadMusic();
         buildLevel1();
-
-
-        ImageIcon coinIcon = new ImageIcon(coinImgs.get(coinFrame));
-
-        scoreBoard = new JLabel();
-        scoreBoard.setIcon(coinIcon);
-        scoreBoard.setText(" " + coinsCount);
-        scoreBoard.setFont(new Font("Arial", Font.BOLD, 20));
-        scoreBoard.setBounds(10, 10, 100, 50);
-        scoreBoard.setVisible(true);
-        scoreBoard.setOpaque(true);
-        scoreBoard.setBackground(Color.pink);
-
-        JFrame frame = new JFrame();
-        frame.add(scoreBoard);
-        frame.add(this);
-        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        //frame.pack();
-        frame.setLocationRelativeTo(null);
-        frame.setVisible(true);
-        frame.setResizable(true);
-        frame.setSize(WIDTH, HEIGHT);
-        //frame.setLayout(null);
-
+        createScoreboard();
+        createFrame();
 
         setFocusable(true);
         addKeyListener(player);
@@ -84,22 +62,7 @@ public class Game extends Canvas {
         strategy = getBufferStrategy();
 
 
-        /*try {
-            InputStream musicFile = getClass().getResourceAsStream("/music/level1.wav");
-
-            assert musicFile != null;
-            AudioInputStream audioStream = AudioSystem.getAudioInputStream(musicFile);
-
-            Clip clip = AudioSystem.getClip();
-            clip.open(audioStream);
-
-            clip.start();
-
-            //Thread.sleep(clip.getMicrosecondLength() / 1000);
-
-        } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
-            e.printStackTrace();
-        }*/
+        //System.out.println(LevelLoader.getInstance().getAmountTiles());
     }
 
 
@@ -109,8 +72,6 @@ public class Game extends Canvas {
             render();
             player.handleInput();
 
-            scoreBoard.setText(String.valueOf(coinsCount));
-
             Iterator<Rectangle> iterator = coinList.iterator();
             while (iterator.hasNext()) {
                 Rectangle coin = iterator.next();
@@ -119,6 +80,8 @@ public class Game extends Canvas {
                     coinsCount++;
                 }
             }
+
+            scoreboard.setText(String.valueOf(coinsCount));
 
 
             try {
@@ -142,28 +105,23 @@ public class Game extends Canvas {
 
 
         int cameraX = 0;
-
         if (player.getBounds().x >= 422) {
             cameraX = (int) (player.getBounds().x - (double) getWidth() / 2);
             g2d.translate(-cameraX, 0);
         }
-
         double parallaxX = cameraX * 0.7;
         g2d.drawImage(backgroundImg, (int) parallaxX, 0, null);
-
-
-        g2d.drawImage(gta6, 0, 0, 300, 227, null);
 
 
         player.drawPlayer(g2d);
 
 
         for (Rectangle dirt : dirtList) {
-            g2d.drawImage(tileAtlas.getSubimage(0, 160, 32, 32), dirt.x, dirt.y, 32, 32, null);
+            g2d.drawImage(tileAtlas.getSubimage(0, 162, 32, 32), dirt.x, dirt.y, 32, 32, null);
         }
 
         for (Rectangle grass : grassList) {
-            g2d.drawImage(tileAtlas.getSubimage(32, 160, 32, 32), grass.x, grass.y, 32, 32, null);
+            g2d.drawImage(tileAtlas.getSubimage(34, 162, 32, 32), grass.x, grass.y, 32, 32, null);
         }
 
         for (Rectangle coin : coinList) {
@@ -171,30 +129,45 @@ public class Game extends Canvas {
         }
 
         for (Rectangle tile : tileList) {
-            g2d.drawImage(tileAtlas.getSubimage(192, 0, 32, 32), tile.x, tile.y, 32, 32, null);
+            g2d.drawImage(tileAtlas.getSubimage(194, 0, 32, 32), tile.x, tile.y, 32, 32, null);
+            // benötigt Untersuchung der Pixel-Abstände in tileAtlas.png
         }
 
 
         g2d.dispose();
         strategy.show();
-
     }
 
 
-    private void loadImgs() throws IOException {
+    private void loadImages() throws IOException {
         backgroundImg = ImageIO.read(Objects.requireNonNull(getClass().getResource("/img/background.png")));
         playerAtlas = ImageIO.read(Objects.requireNonNull(getClass().getResource("/img/playerAtlas.png")));
         tileAtlas = ImageIO.read(Objects.requireNonNull(getClass().getResource("/img/tileAtlas.png")));
-        gta6 = ImageIO.read(Objects.requireNonNull(getClass().getResource("/img/gta6.png")));
 
         for (int i = 1; i <= 8; i++) {
             BufferedImage coin = ImageIO.read(Objects.requireNonNull(getClass().getResource("/img/coin/coin" + i + ".png")));
             coinImgs.add(coin);
         }
-
-
     }
 
+    private void loadMusic() {
+        try {
+            InputStream musicFile = getClass().getResourceAsStream("/music/level1.wav");
+
+            assert musicFile != null;
+            AudioInputStream audioStream = AudioSystem.getAudioInputStream(musicFile);
+
+            Clip clip = AudioSystem.getClip();
+            clip.open(audioStream);
+
+            clip.start();
+
+            //Thread.sleep(clip.getMicrosecondLength() / 1000);
+
+        } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+            e.printStackTrace();
+        }
+    }
 
     private void buildLevel1() {
         loader.loadLevel("src/main/resources/level/level1.txt");
@@ -227,13 +200,56 @@ public class Game extends Canvas {
         }
     }
 
+    private void createScoreboard() {
+        ImageIcon coinIcon = new ImageIcon(coinImgs.get(coinFrame));
 
-    public int[][] getLevelOne() {
-        return level1;
+        scoreboard = new JLabel();
+        scoreboard.setIcon(coinIcon);
+        scoreboard.setText(" " + coinsCount);
+        scoreboard.setFont(new Font("Arial", Font.BOLD, 20));
+        scoreboard.setBounds(10, 10, 100, 50);
+        scoreboard.setVisible(true);
+        scoreboard.setOpaque(true);
+        scoreboard.setBackground(Color.GRAY);
     }
+
+    private void createFrame() {
+        JFrame frame = new JFrame();
+        frame.add(scoreboard);
+        frame.add(this);
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        //frame.pack();
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
+        frame.setResizable(true);
+        frame.setSize(WIDTH, HEIGHT);
+        //frame.setLayout(null);
+    }
+
+    public BufferedImage mirrorImage(BufferedImage original) {
+        int width = original.getWidth();
+        int height = original.getHeight();
+
+        BufferedImage mirroredImage = new BufferedImage(width, height, original.getType());
+
+        AffineTransform transform = new AffineTransform();
+        transform.concatenate(AffineTransform.getScaleInstance(-1, 1)); // Horizontal spiegeln
+        transform.concatenate(AffineTransform.getTranslateInstance(width, 0)); // Verschieben, um das Bild richtig auszurichten
+
+        Graphics2D g2d = mirroredImage.createGraphics();
+        g2d.drawImage(original, transform, null);
+        g2d.dispose();
+
+        return mirroredImage;
+    }
+
 
     public BufferedImage getPlayerAtlas() {
         return playerAtlas;
+    }
+
+    public int[][] getLevelOne() {
+        return level1;
     }
 
     public Player getPlayer() {

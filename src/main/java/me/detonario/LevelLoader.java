@@ -10,10 +10,11 @@ public class LevelLoader {
 
     private static final LevelLoader instance = new LevelLoader();
 
+    private int[][] level;
+
     private LevelLoader() {
     }
 
-    private int[][] level;
 
     public void loadLevel(String fileName) {
         try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
@@ -33,8 +34,8 @@ public class LevelLoader {
 
 
             level = new int[levelList.size()][];
-            for (int i = 0; i < levelList.size(); i++) {
 
+            for (int i = 0; i < levelList.size(); i++) {
                 level[i] = levelList.get(i);
 
                 /*
@@ -52,9 +53,8 @@ public class LevelLoader {
         } catch (IOException | NumberFormatException e) {
             e.printStackTrace();
         }
-
-
     }
+
 
     public int getAmountTiles() {
         int totalElements = 0;
@@ -65,6 +65,7 @@ public class LevelLoader {
 
         return totalElements;
     }
+
 
     public int[][] getLevel() {
         return level;
