@@ -4,7 +4,6 @@ import javax.imageio.ImageIO;
 import javax.sound.sampled.*;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.geom.AffineTransform;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -25,16 +24,19 @@ public class Game extends Canvas {
 
     private BufferStrategy strategy;
 
-    private BufferedImage backgroundImg, playerAtlas, tileAtlas;
+    private BufferedImage backgroundImg, playerAtlas, tileAtlas, questionBlockImg, carrot;
     private List<BufferedImage> coinImgs = new ArrayList<>();
 
     private LevelLoader loader = LevelLoader.getInstance();
-    private int[][] level1;
+    private int[][] level1 = loader.getLevel();
 
     private List<Rectangle> dirtList = new ArrayList<>();
     private List<Rectangle> grassList = new ArrayList<>();
     private List<Rectangle> coinList = new ArrayList<>();
     private List<Rectangle> tileList = new ArrayList<>();
+    private List<Rectangle> questionBlockList = new ArrayList<>();
+    private List<Rectangle> powerUpList = new ArrayList<>();
+
 
     private JLabel scoreboard;
     private int coinsCount = 0;
@@ -72,14 +74,34 @@ public class Game extends Canvas {
             render();
             player.handleInput();
 
-            Iterator<Rectangle> iterator = coinList.iterator();
-            while (iterator.hasNext()) {
-                Rectangle coin = iterator.next();
+            Iterator<Rectangle> coinIterator = coinList.iterator();
+            while (coinIterator.hasNext()) {
+                Rectangle coin = coinIterator.next();
                 if (player.getBounds().intersects(coin)) {
-                    iterator.remove();
+                    coinIterator.remove();
                     coinsCount++;
                 }
             }
+
+
+            if (HelpMethods.activates(player.getBounds(), questionBlockList.getFirst())) {
+                int powerUpLocX = (int) (questionBlockList.getFirst().getX());
+                int powerUpLocY = (int) (questionBlockList.getFirst().getY() - 32);
+                Rectangle powerUp = new Rectangle();
+                powerUp.setLocation(powerUpLocX, powerUpLocY);
+
+                powerUpList.add(powerUp);
+            }
+
+            if (HelpMethods.activates(player.getBounds(), questionBlockList.get(1))) {
+                int powerUpLocX = (int) (questionBlockList.get(1).getX());
+                int powerUpLocY = (int) (questionBlockList.get(1).getY() - 32);
+                Rectangle powerUp = new Rectangle();
+                powerUp.setLocation(powerUpLocX, powerUpLocY);
+
+                powerUpList.add(powerUp);
+            }
+
 
             scoreboard.setText(String.valueOf(coinsCount));
 
@@ -133,6 +155,14 @@ public class Game extends Canvas {
             // benötigt Untersuchung der Pixel-Abstände in tileAtlas.png
         }
 
+        for (Rectangle qBlock : questionBlockList) {
+            g2d.drawImage(questionBlockImg, qBlock.x, qBlock.y, 32, 32, null);
+        }
+
+        for (Rectangle pUp : powerUpList) {
+            g2d.drawImage(carrot, pUp.x, pUp.y, 32, 32, null);
+        }
+
 
         g2d.dispose();
         strategy.show();
@@ -140,14 +170,18 @@ public class Game extends Canvas {
 
 
     private void loadImages() throws IOException {
-        backgroundImg = ImageIO.read(Objects.requireNonNull(getClass().getResource("/img/background.png")));
-        playerAtlas = ImageIO.read(Objects.requireNonNull(getClass().getResource("/img/playerAtlas.png")));
-        tileAtlas = ImageIO.read(Objects.requireNonNull(getClass().getResource("/img/tileAtlas.png")));
-
         for (int i = 1; i <= 8; i++) {
             BufferedImage coin = ImageIO.read(Objects.requireNonNull(getClass().getResource("/img/coin/coin" + i + ".png")));
             coinImgs.add(coin);
         }
+
+        backgroundImg = ImageIO.read(Objects.requireNonNull(getClass().getResource("/img/background.png")));
+        playerAtlas = ImageIO.read(Objects.requireNonNull(getClass().getResource("/img/playerAtlas.png")));
+        tileAtlas = ImageIO.read(Objects.requireNonNull(getClass().getResource("/img/tileAtlas.png")));
+        questionBlockImg = ImageIO.read(Objects.requireNonNull(getClass().getResource("/img/questionBlockImg.png")));
+        carrot = ImageIO.read(Objects.requireNonNull(getClass().getResource("/img/carrot.png")));
+
+
     }
 
     private void loadMusic() {
@@ -196,6 +230,13 @@ public class Game extends Canvas {
                     Rectangle tile = new Rectangle(x * 32, y * 32, 32, 32);
                     tileList.add(tile);
                 }
+
+                if (level1[y][x] == 5) {
+                    Rectangle qBlock = new Rectangle(x * 32, y * 32, 32, 32);
+                    questionBlockList.add(qBlock);
+                }
+
+
             }
         }
     }
@@ -226,7 +267,7 @@ public class Game extends Canvas {
         //frame.setLayout(null);
     }
 
-    public BufferedImage mirrorImage(BufferedImage original) {
+    /*public BufferedImage mirrorImage(BufferedImage original) {
         int width = original.getWidth();
         int height = original.getHeight();
 
@@ -241,7 +282,7 @@ public class Game extends Canvas {
         g2d.dispose();
 
         return mirroredImage;
-    }
+    }*/
 
 
     public BufferedImage getPlayerAtlas() {

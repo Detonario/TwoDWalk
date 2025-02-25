@@ -1,5 +1,6 @@
 package me.detonario;
 
+import java.awt.*;
 import java.awt.geom.Rectangle2D;
 
 public class HelpMethods {
@@ -17,14 +18,14 @@ public class HelpMethods {
 
     private static boolean isSolid(float x, float y, int[][] lvlData) {
         if (x < 0 || x > 5000) return true;
-        //if (y < 0 || y > 450) return true;
 
         float xIndex = x / 32;
         float yIndex = y / 32;
 
+        // Position holen in lvlData
         int value = lvlData[(int) yIndex][(int) xIndex];
 
-        if (value == 1 || value == 2 || value == 4) return true;
+        if (value == 1 || value == 2 || value == 4 || value == 5) return true;
 
         return false;
     }
@@ -35,14 +36,14 @@ public class HelpMethods {
         int currentTile = (int) (bounds.x / 32);
 
         if (vx > 0) {
-            //Right
+            // Right
             int tileXPos = currentTile * 32;
             int xOffset = (int) (32 - bounds.width);
 
             return tileXPos + xOffset - 1;
 
         } else if (vx < 0) {
-            //Left
+            // Left
             return currentTile * 32;
 
         } else {
@@ -56,14 +57,14 @@ public class HelpMethods {
         int currentTile = (int) (bounds.y / 32);
 
         if (airSpeed > 0) {
-            //Falling - touching floor
+            // Falling / touching floor
             int tileYPos = currentTile * 32;
             int yOffset = (int) (32 - bounds.height);
 
             return tileYPos + yOffset - 1;
 
         } else if (airSpeed < 0) {
-            //Jumping
+            // Jumping
             return currentTile * 32;
 
         } else {
@@ -80,4 +81,13 @@ public class HelpMethods {
 
         return true;
     }
+
+
+    public static boolean activates(Rectangle2D.Float player, Rectangle rectangle) {
+        int xIndex = (int) player.x / 32;
+        //float yIndex = player.y / 32;
+
+        return player.getMinY() == rectangle.getMaxY() && player.getX() == rectangle.getX();
+    }
+
 }
